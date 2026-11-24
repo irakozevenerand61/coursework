@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>README Viewer</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --muted: #656d76;
+    --accent: #0969da;
+    --code-bg: #f6f8fa;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  #app { max-width: 860px; margin: 0 auto; padding: 32px 20px 64px; }
+  header {
+    display: flex; align-items: center; gap: 10px;
+    padding-bottom: 16px; margin-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 18px; margin: 0; font-weight: 600; }
+  .badge {
+    font-size: 12px; padding: 2px 8px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--muted);
+  }
+  .badge.live { color: #1a7f37; border-color: #1a7f37; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px 40px;
+    box-shadow: 0 1px 3px rgba(31,35,40,0.06);
+  }
+  /* Rendered markdown styles */
+  .markdown h1 { font-size: 2em; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .markdown h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  .markdown a { color: var(--accent); }
+  .markdown code {
+    background: var(--code-bg); border-radius: 6px; padding: 2px 6px;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace; font-size: 85%;
+  }
+  .markdown pre {
+    background: var(--code-bg); border-radius: 6px; padding: 16px; overflow: auto;
+  }
+  .markdown pre code { padding: 0; background: none; }
+  .markdown blockquote {
+    margin: 0; padding: 0 16px; color: var(--muted);
+    border-left: 4px solid var(--border);
+  }
+  .markdown table { border-collapse: collapse; }
+  .markdown th, .markdown td { border: 1px solid var(--border); padding: 6px 13px; }
+  .markdown img { max-width: 100%; }
+  .status { margin-top: 16px; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>📄 {{ filename }}</h1>
+    <span class="badge" :class="{ live: source === 'file' }">
+      {{ source === 'file' ? 'loaded from file' : 'embedded copy' }}
+    </span>
+  </header>
+
+  <div class="card markdown" v-html="rendered"></div>
+
+  <p class="status">
+    {{ raw.trim() ? raw.split('\n').length + ' lines · ' + raw.length + ' chars'
+       : 'File is empty.' }}
+    <template v-if="error"> — {{ error }}</template>
+  </p>
+</div>
+
+<script>
+const EMBEDDED_README = `# Test
+`;
+
+Vue.createApp({
+  data() {
+    return {
+      filename: "README.md",
+      raw: EMBEDDED_README,
+      source: "embedded",
+      error: "",
+    };
+  },
+  computed: {
+    rendered() {
+      return marked.parse(this.raw || "");
+    },
+  },
+  mounted() {
+    // Try to load the live file; fall back to the embedded copy above.
+    fetch("README.md")
+      .then((r) => {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.text();
+      })
+      .then((text) => {
+        this.raw = text;
+        this.source = "file";
+      })
+      .catch(() => {
+        this.error = "Could not fetch README.md live; showing embedded copy.";
+      });
+  },
+}).mount("#app");
+</script>
+</body>
+</html>
